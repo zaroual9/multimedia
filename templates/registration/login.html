@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Log In{% endblock title %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <h3 class="mt-4 mb-4">Log In</h3>
+
+            <form method="post" onsubmit="return validateCaptcha()">
+                {% csrf_token %}
+                {{ form.as_p }}
+
+                <!-- Captcha container -->
+                <div>
+                    <canvas id="captchaCanvas" width="200" height="80"></canvas>
+                    <br>
+                    <input type="text" id="id_captcha_input" name="captcha_input" placeholder="Enter the code shown above" required>
+                    <button type="button" onclick="refreshCaptcha()">Refresh</button>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success">Log In</button>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a class="btn btn-outline-info" href="{% url 'signup' %}" role="button">Create Account</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Generate a random alphanumeric captcha code
+    function generateCaptchaCode() {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        return Array.from({ length: 6 }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
+    }
+
+    // Display the captcha text on the canvas
+    function drawCaptchaText(code) {
+        const canvas = document.getElementById('captchaCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Clear previous content
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Set font and style
+        ctx.font = '30px Arial';
+        ctx.fillStyle = '#000000';
+
+        // Draw the captcha text
+        ctx.fillText(code, 20, 50);
+    }
+
+    // Display the captcha text and return the code
+    function refreshCaptcha() {
+        const captchaCode = generateCaptchaCode();
+        const captchaInput = document.getElementById('id_captcha_input');
+
+        // Draw the captcha text on the canvas
+        drawCaptchaText(captchaCode);
+
+        // Clear previous input
+        captchaInput.value = '';
+
+        return captchaCode;
+    }
+
+    // Validate the entered captcha code
+    function validateCaptcha() {
+        const enteredCode = document.getElementById('id_captcha_input').value;
+        const canvas = document.getElementById('captchaCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Check if entered code matches the captcha code
+        const captchaCode = getImageText(imageData);
+        console.log(captchaCode);
+        if (enteredCode.toLowerCase() != captchaCode.toLowerCase()) {
+            // Captcha code is correct, proceed with form submission
+            return true;
+        } else {
+            // Captcha code is incorrect, show an alert (you can customize this behavior)
+            alert('Incorrect captcha code. Please try again.');
+            return false;
+        }
+    }
+
+    // Extract the text from the image data
+    function getImageText(imageData) {
+        const textData = [];
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            // Assuming black text on a white background
+            const isBlack = imageData.data[i] === 0 && imageData.data[i + 1] === 0 && imageData.data[i + 2] === 0;
+            textData.push(isBlack ? '1' : '0');
+        }
+        const binaryText = textData.join('');
+        const text = binaryToText(binaryText);
+        return text;
+    }
+
+    // Convert binary string to text
+    function binaryToText(binary) {
+        return binary
+            .split(/(\d{8})/)
+            .filter(Boolean)
+            .map((byte) => String.fromCharCode(parseInt(byte, 2)))
+            .join('');
+    }
+
+    // Initialize the captcha on page load
+    refreshCaptcha();
+</script>
+
+{% endblock content %}
